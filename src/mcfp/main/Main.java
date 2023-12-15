@@ -15,14 +15,34 @@ import mcfp.Version;
 public class Main {
 
 	public static void main(String[] args) {
+		if(args.length == 0) return;
+
+		String output = "output";
+
+		int index = 0;
+		while(index < args.length) {
+			if(args[index].startsWith("-")) {
+				String option = args[index].substring(1);
+
+				if(option.equals("d")) {
+					output = args[++index];
+				}
+			}else {
+				break;
+			}
+
+			index++;
+		}
+
+
 		try {
-			compile(new File("mcfpsrc"));
+			compile(new File(args[index]), output);
 		}catch(Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public static void compile(File folder) throws IOException {
+	public static void compile(File folder, String output) throws IOException {
 		MCFPCompiler compiler = new MCFPCompiler(Version.MC1_20_2);
 
 		for(File file : getFiles(folder, new FileFilter() {
@@ -34,7 +54,7 @@ public class Main {
 			compiler.addFile(file);
 		}
 
-		compiler.run(folder.getName());
+		compiler.run(output);
 	}
 
 	public static List<File> getFiles(File file, FileFilter filter) {

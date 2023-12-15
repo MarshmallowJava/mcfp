@@ -2,6 +2,8 @@ package mcfp.instruction;
 
 import java.util.List;
 
+import mcfp.MCFPClass;
+import mcfp.MCFPClassLoader;
 import mcfp.Namespace;
 import mcfp.SyntaxException;
 import mcfp.instruction.arithmetic.Calculator;
@@ -12,7 +14,9 @@ public class InstructionGoto extends Instruction{
 	private InstructionBlockable target;
 	private List<String> condition;
 
-	public InstructionGoto(InstructionBlockable target, String condition) {
+	public InstructionGoto(InstructionBlockable target, String condition, MCFPClass caller) {
+		super(caller);
+
 		this.target = target;
 		this.condition = Calculator.convert(condition);
 
@@ -22,8 +26,8 @@ public class InstructionGoto extends Instruction{
 	}
 
 	@Override
-	public String[] toCommands(Namespace namespace) {
-		String[] condition = Calculator.toCommands(this.condition, namespace, this.target);
+	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
+		String[] condition = Calculator.toCommands(this.condition, namespace, this.target, this.getCaller());
 		String[] result = new String[condition.length + 1];
 
 		for(int i = 0;i < condition.length;i++) {

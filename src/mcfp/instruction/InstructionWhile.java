@@ -2,6 +2,8 @@ package mcfp.instruction;
 
 import java.util.List;
 
+import mcfp.MCFPClass;
+import mcfp.MCFPClassLoader;
 import mcfp.Namespace;
 import mcfp.Node;
 import mcfp.SyntaxException;
@@ -14,8 +16,8 @@ public class InstructionWhile extends InstructionBlockable{
 	private List<String> condition;
 	private int index;
 
-	public InstructionWhile(Node<String> node, Version version) {
-		super(node, version);
+	public InstructionWhile(Node<String> node, Version version, MCFPClass caller) {
+		super(node, version, caller);
 
 		String data = node.getData();
 		String condition = data.substring(data.indexOf("(") + 1, data.lastIndexOf(")")).trim();
@@ -24,7 +26,7 @@ public class InstructionWhile extends InstructionBlockable{
 		if(Calculator.checkType(formula) == Type.BOOL) {
 			this.condition = formula;
 			this.index = node.getParent().indexOf(node);
-			this.contents.add(new InstructionGoto(this, condition));
+			this.contents.add(new InstructionGoto(this, condition, caller));
 		}else {
 			throw new SyntaxException("condition formula type should be bool");
 		}
@@ -34,13 +36,13 @@ public class InstructionWhile extends InstructionBlockable{
 		return data.matches("while\\s*\\(\\s*.+\\s*\\)\\s*:\\s*");
 	}
 
-	public static Instruction supply(Node<String> node, Version version) {
-		return new InstructionWhile(node, version);
+	public static Instruction supply(Node<String> node, Version version, MCFPClass caller) {
+		return new InstructionWhile(node, version, caller);
 	}
 
 	@Override
-	public String[] toCommands(Namespace namespace) {
-		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder());
+	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
+		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder(), this.getCaller());
 		String[] result = new String[conditions.length + 1];
 
 		for(int i = 0;i < conditions.length;i++) {

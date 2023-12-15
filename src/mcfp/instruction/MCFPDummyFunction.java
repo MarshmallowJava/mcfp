@@ -11,7 +11,7 @@ public class MCFPDummyFunction extends MCFPFunction{
 	private List<Instruction> instructions = new ArrayList<>();
 
 	public MCFPDummyFunction() {
-		super("dummy");
+		super("dummy", null);
 	}
 
 	public void setName(String name) {

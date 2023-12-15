@@ -9,8 +9,12 @@ import java.util.Scanner;
 import java.util.Stack;
 
 import mcfp.INamed;
+import mcfp.MCFPClass;
+import mcfp.MCFPFinder;
+import mcfp.MCFPFunction;
 import mcfp.Namespace;
 import mcfp.SyntaxException;
+import mcfp.instruction.FunctionCaller;
 
 public class Calculator {
 
@@ -36,34 +40,35 @@ public class Calculator {
 		PRIORITIES.put("%", 3);
 	}
 
+	public static boolean isFormula(String data) {
+		try {
+			checkType(data);
+			return true;
+		}catch(Exception e) {
+			return false;
+		}
+	}
+
 	//逆ポーランド記法に変換します
 	public static List<String> convert(String formula){
 		List<String> src = new ArrayList<>();
 
-		final String pattern = "\\(|\\)|\\+|\\-|\\*|\\/|%|<|>|=|!|&|\\||[0-9A-Za-z_]+";
-
 		try(Scanner scanner = new Scanner(new StringReader(formula));){
 			scanner.useDelimiter("\\s*");
 
-			while(true) {
-				if(scanner.hasNext(pattern)) {
-					src.add(scanner.next(pattern).trim());
-				}else {
-					break;
-				}
+			while(scanner.hasNext()) {
+				src.add(scanner.next());
 			}
-		}catch(Exception e) {
-			throw new SyntaxException("expression is invalid");
 		}
 
 		//combine
 		{
 			List<String> sorted = new ArrayList<>();
 			String buff = null;
-			int type = -1;
+			int type = -1, layer = 0;
 
 			for(String token : src) {
-				int tokenType = token.matches("[a-zA-Z0-9]") ? TYPE_STRING : token.matches("[<>!=]") ? TYPE_COMPARE : TYPE_FORMULA;
+				int tokenType = token.matches("[a-zA-Z0-9\\.]") ? TYPE_STRING : token.matches("[<>!=]") ? TYPE_COMPARE : TYPE_FORMULA;
 
 				if(buff == null) {
 					buff = token;
@@ -73,6 +78,14 @@ public class Calculator {
 						sorted.add(buff + "=");
 						buff = null;
 						type = -1;
+					}else if(token.equals("(") && type == TYPE_STRING){
+						layer++;
+						buff += token;
+					}else if(layer > 0){
+						if(token.equals(")")) {
+							layer--;
+						}
+						buff += token;
 					}else if(tokenType == TYPE_FORMULA || tokenType != type) {
 						sorted.add(buff);
 						buff = token;
@@ -82,6 +95,7 @@ public class Calculator {
 					}
 				}
 			}
+
 			sorted.add(buff);
 			src = sorted;
 		}
@@ -90,7 +104,7 @@ public class Calculator {
 		Stack<String> stack = new Stack<>();
 
 		for(String token : src) {
-			if(token.matches("[0-9A-Za-z_]+")) {
+			if(token.matches("[0-9A-Za-z_]+") || FunctionCaller.isFunction(token)) {
 				output.add(token);
 			}else if(token.equals("(")) {
 				stack.push(token);
@@ -163,7 +177,7 @@ public class Calculator {
 		if(obj instanceof Type) return ((Type)obj);
 
 		String token = (String) obj;
-		if(token.matches("[a-zA-Z0-9]+")) return Type.INTEGER;
+		if(token.matches("[a-zA-Z0-9]+") || FunctionCaller.isFunction(token)) return Type.INTEGER;
 
 		throw new SyntaxException(token + ": is not formula elememt");
 	}
@@ -180,16 +194,16 @@ public class Calculator {
 		return PRIORITIES.containsKey(token);
 	}
 
-	public static String[] toCommands(String formula, Namespace namespace, INamed holder) {
-		return toCommands(convert(formula), namespace, holder);
+	public static String[] toCommands(String formula, Namespace namespace, INamed holder, MCFPClass caller) {
+		return toCommands(convert(formula), namespace, holder, caller);
 	}
 
-	public static String[] toCommands(String formula, String resultName, Namespace namespace, INamed holder) {
-		return toCommands(convert(formula), resultName, namespace, holder);
+	public static String[] toCommands(String formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller) {
+		return toCommands(convert(formula), resultName, namespace, holder, caller);
 	}
 
-	public static String[] toCommands(List<String> formula, Namespace namespace, INamed holder) {
-		return toCommands(formula, "$temp", namespace, holder);
+	public static String[] toCommands(List<String> formula, Namespace namespace, INamed holder, MCFPClass caller) {
+		return toCommands(formula, "$temp", namespace, holder, caller);
 	}
 
 	/**
@@ -197,7 +211,7 @@ public class Calculator {
 	 * 最終的な式が整数値であればtemp[var]に格納
 	 * 最終的な式が真偽値であればtemp[var]に真であれば1, 偽であれば0が格納される
 	 */
-	public static String[] toCommands(List<String> formula, String resultName, Namespace namespace, INamed holder) {
+	public static String[] toCommands(List<String> formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller) {
 		List<String> result = new ArrayList<>();
 		List<Integer> reserveList = new ArrayList<>();
 
@@ -287,8 +301,12 @@ public class Calculator {
 			String value = lastData.toString();
 			if(value.matches("[0-9]+")) {
 				result.add(String.format("scoreboard players set %s var %s", resultName, lastData));
-			}else {
-				result.add(String.format("scoreboard players operation %s var = %s var", resultName, convertName(lastData.toString(), namespace, holder)));
+			}else if(FunctionCaller.isFunction(value)){
+				FunctionCaller.FunctionInfo info = FunctionCaller.analyze(value);
+				MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+				result.add(String.format("function %s", namespace.get(function.getFullName())));
+				result.add(String.format("scoreboard players operation %s var = result var", resultName));
 			}
 		}else {
 			result.add(String.format("scoreboard players operation %s var = temp%08x var", resultName, lastData));
@@ -310,7 +328,9 @@ public class Calculator {
 
 		if(str.matches("[0-9]+")){
 			return str;
-		}else {
+		}else if(FunctionCaller.isFunction(str)){
+			return convertName(str, namespace, holder);
+		}else{
 			return convertName(str, namespace, holder);
 		}
 	}

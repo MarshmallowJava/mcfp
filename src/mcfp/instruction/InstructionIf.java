@@ -2,6 +2,8 @@ package mcfp.instruction;
 
 import java.util.List;
 
+import mcfp.MCFPClass;
+import mcfp.MCFPClassLoader;
 import mcfp.Namespace;
 import mcfp.Node;
 import mcfp.SyntaxException;
@@ -14,8 +16,8 @@ public class InstructionIf extends InstructionBlockable{
 	private List<String> condition;
 	private int index;
 
-	public InstructionIf(Node<String> node, Version version) {
-		super(node, version);
+	public InstructionIf(Node<String> node, Version version, MCFPClass caller) {
+		super(node, version, caller);
 
 		String data = node.getData();
 		String condition = data.substring(data.indexOf("(") + 1, data.lastIndexOf(")")).trim();
@@ -33,13 +35,13 @@ public class InstructionIf extends InstructionBlockable{
 		return data.matches("if\\s*\\(\\s*.+\\s*\\)\\s*:\\s*");
 	}
 
-	public static Instruction supply(Node<String> node, Version version) {
-		return new InstructionIf(node, version);
+	public static Instruction supply(Node<String> node, Version version, MCFPClass caller) {
+		return new InstructionIf(node, version, caller);
 	}
 
 	@Override
-	public String[] toCommands(Namespace namespace) {
-		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder());
+	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
+		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder(), this.getCaller());
 		String[] result = new String[conditions.length + 1];
 
 		for(int i = 0;i < conditions.length;i++) {

@@ -5,14 +5,19 @@ import java.util.List;
 
 public class MCFPClass implements INamed{
 
+	private final List<String> importSource;
+
 	private final String name, namespace;
+	private final MCFPClassLoader classloader;
 
 	private final List<MCFPFunction> functions = new ArrayList<>();
 	private final List<MCFPClass> subclasses = new ArrayList<>();
 
-	public MCFPClass(String name, String namespace) {
+	public MCFPClass(String name, String namespace, List<String> importSource, MCFPClassLoader classloader) {
 		this.name = name;
 		this.namespace = namespace;
+		this.importSource = importSource;
+		this.classloader = classloader;
 	}
 
 	void addFunction(MCFPFunction function) {
@@ -37,6 +42,22 @@ public class MCFPClass implements INamed{
 
 	public String getNamespace() {
 		return this.namespace;
+	}
+
+	public String getFQCN() {
+		if(this.namespace.isEmpty()) {
+			return this.name;
+		}else {
+			return this.namespace + "." + this.name;
+		}
+	}
+
+	public List<String> getImportSource(){
+		return this.importSource;
+	}
+
+	public MCFPClassLoader getClassLoader() {
+		return this.classloader;
 	}
 
 	@Override

@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import mcfp.INamed;
+import mcfp.MCFPClass;
+import mcfp.MCFPClassLoader;
 import mcfp.MCFPCompiler;
 import mcfp.Namespace;
 import mcfp.Node;
@@ -20,7 +22,9 @@ public class InstructionMacro extends Instruction implements INamed{
 
 	private int index;
 
-	public InstructionMacro(Node<String> node) {
+	public InstructionMacro(Node<String> node, MCFPClass caller) {
+		super(caller);
+
 		this.data = node.getData();
 		this.index = node.getParent().indexOf(node);
 
@@ -61,25 +65,25 @@ public class InstructionMacro extends Instruction implements INamed{
 		return false;
 	}
 
-	public static Instruction supply(Node<String> node, Version version) {
-		return new InstructionMacro(node);
+	public static Instruction supply(Node<String> node, Version version, MCFPClass caller) {
+		return new InstructionMacro(node, caller);
 	}
 
 	@Override
 	public void writeCommands(BufferedWriter writer, MCFPCompiler compiler) throws IOException {
 		super.writeCommands(writer, compiler);
 
-		Namespace namespace = compiler.getNamespace();
+		Namespace namespace = compiler.getClassLoader().getNamespace();
 		String name = namespace.add(this);
 
 		MCFPDummyFunction func = new MCFPDummyFunction();
-		func.add(new InstructionSimple("$" + this.data));
+		func.add(new InstructionSimple("$" + this.data, this.getCaller()));
 
 		compiler.writeFunction(new File("output/" + name + ".mcfunction"), func);
 	}
 
 	@Override
-	public String[] toCommands(Namespace namespace) {
+	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
 		int size = this.variables.size();
 		String[] result = new String[size + 2];
 

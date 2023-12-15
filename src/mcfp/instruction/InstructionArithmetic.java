@@ -1,5 +1,7 @@
 package mcfp.instruction;
 
+import mcfp.MCFPClass;
+import mcfp.MCFPClassLoader;
 import mcfp.Namespace;
 import mcfp.Node;
 import mcfp.Version;
@@ -9,36 +11,33 @@ public class InstructionArithmetic extends Instruction{
 
 	private String to, formula;
 
-	public InstructionArithmetic(String to, String formula) {
+	public InstructionArithmetic(String to, String formula, MCFPClass caller) {
+		super(caller);
 		this.to = to;
 		this.formula = formula;
 	}
 
 	public static boolean condition(String data, Version version) {
-		if(data.matches("[a-zA-z][0-9a-zA-Z]*\\s*[+\\-*/%]?=\\s*[0-9a-zA-z+\\-*/%()<>=!\\s]+")) {
-			try {
-				Calculator.checkType(data.substring(data.indexOf("=") + 1));
-				return true;
-			}catch(Exception e) {
-				e.printStackTrace();
-				return false;
-			}
-		}else {
+		try {
+			Calculator.checkType(data.substring(data.indexOf("=") + 1));
+			return true;
+		}catch(Exception e) {
+			e.printStackTrace();
 			return false;
 		}
 	}
 
-	public static Instruction supply(Node<String> node, Version version) {
+	public static Instruction supply(Node<String> node, Version version, MCFPClass caller) {
 		String data = node.getData();
 		String to = data.substring(0, data.indexOf("=")).trim();
 		String formula = data.substring(data.indexOf("=") + 1);
 
-		return new InstructionArithmetic(to, formula);
+		return new InstructionArithmetic(to, formula, caller);
 	}
 
 	@Override
-	public String[] toCommands(Namespace namespace) {
-		return Calculator.toCommands(this.formula, this.to, namespace, this.getNameHolder());
+	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
+		return Calculator.toCommands(this.formula, this.to, namespace, this.getNameHolder(), this.getCaller());
 	}
 
 	@Override
