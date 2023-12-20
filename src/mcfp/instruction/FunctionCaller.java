@@ -2,8 +2,14 @@ package mcfp.instruction;
 
 import java.io.StringReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
+import mcfp.INamed;
+import mcfp.MCFPClass;
+import mcfp.MCFPFinder;
+import mcfp.MCFPFunction;
+import mcfp.Namespace;
 import mcfp.SyntaxException;
 import mcfp.instruction.arithmetic.Calculator;
 
@@ -74,6 +80,54 @@ public class FunctionCaller {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	public static List<String> prepare(FunctionInfo info, INamed owner, MCFPClass caller, Namespace namespace){
+		List<String> commands = new ArrayList<>();
+
+		MCFPFunction function = MCFPFinder.findFunction(info, caller);
+		String[] varnames = function.getArgumentNames();
+
+		int size = info.getArgumentCount();
+		for(int i = 0;i < size;i++) {
+			Object arg = info.arguments.get(i);
+
+			//仮引数名
+			String varname = varnames[i];
+			varname = namespace.add(varname, function);
+
+			//変数もしくは定数
+			if(arg instanceof String) {
+				String data = arg.toString();
+				//定数
+				if(data.matches("[0-9]+")) {
+					commands.add(String.format("scoreboard players set %s var %s", varname, data));
+				}else {
+					commands.add(String.format("scoreboard players set %s var %s", varname, namespace.searchLastDefined(data, owner)));
+				}
+			}
+
+			//関数
+			if(arg instanceof FunctionInfo) {
+				FunctionInfo info2 = (FunctionInfo)arg;
+				MCFPFunction function2 = MCFPFinder.findFunction(info2, caller);
+
+				//呼び出し
+				commands.addAll(prepare(info2, owner, caller, namespace));
+				commands.add(String.format("function %s", namespace.get(function2.getFullName())));
+
+				//結果を代入
+				commands.add(String.format("scoreboard players operation %s var = result var", varname));
+			}
+
+			//数式
+			if(arg instanceof List) {
+				commands.addAll(Arrays.asList(Calculator.toCommands((List<String>)arg, "$" + varname, namespace, owner, caller)));
+			}
+		}
+
+		return commands;
+	}
+
 	public static class FunctionInfo{
 
 		//変数名
@@ -104,6 +158,14 @@ public class FunctionCaller {
 
 		public boolean isObviousClassName() {
 			return this.className != null;
+		}
+
+		public List<Object> getArguments() {
+			return this.arguments;
+		}
+
+		public int getArgumentCount() {
+			return this.arguments.size();
 		}
 
 		@Override

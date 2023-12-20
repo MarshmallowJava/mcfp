@@ -114,7 +114,7 @@ public class MCFPClassLoader {
 	private MCFPFunction loadFunction(Node<String> master, MCFPClass owner) {
 		String title = master.getData();
 		String name = title.substring(5, title.indexOf("(")).trim();
-		String[] args = null;
+		String[] args = new String[0];
 
 		{
 			String arguments = title.substring(title.indexOf("(") + 1, title.lastIndexOf(")")).trim();

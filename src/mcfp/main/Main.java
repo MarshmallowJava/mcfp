@@ -23,7 +23,6 @@ public class Main {
 		while(index < args.length) {
 			if(args[index].startsWith("-")) {
 				String option = args[index].substring(1);
-
 				if(option.equals("d")) {
 					output = args[++index];
 				}

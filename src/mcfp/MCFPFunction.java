@@ -42,7 +42,7 @@ public class MCFPFunction implements INamed{
 
 	@Override
 	public String getFullName() {
-		return this.parentClass.getFullName() + ".f" + this.name;
+		return this.parentClass.getFullName() + ".f" + this.name + this.args.length;
 	}
 
 	@Override

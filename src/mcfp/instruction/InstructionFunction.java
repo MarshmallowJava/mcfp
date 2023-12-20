@@ -1,12 +1,13 @@
 package mcfp.instruction;
 
-import mcfp.INamed;
+import java.util.List;
+
 import mcfp.MCFPClass;
 import mcfp.MCFPClassLoader;
+import mcfp.MCFPFinder;
 import mcfp.MCFPFunction;
 import mcfp.Namespace;
 import mcfp.Node;
-import mcfp.SyntaxException;
 import mcfp.Version;
 
 public class InstructionFunction extends Instruction{
@@ -28,21 +29,16 @@ public class InstructionFunction extends Instruction{
 
 	@Override
 	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
-		String name = namespace.searchLastDefined(this.getParentName() + ".f" + this.funcInfo.getFunctionName());
+		MCFPFunction function = MCFPFinder.findFunction(this.funcInfo, this.getCaller());
+		List<String> prepare = FunctionCaller.prepare(this.funcInfo, this.getParent(), this.getCaller(), namespace);
+		int size = prepare.size();
 
-		if(name == null) {
-			throw new SyntaxException(this.funcInfo.getFunctionName() + " is not defined");
-		}else {
-			INamed owner = this.getParent();
-			while(!(owner instanceof MCFPFunction)) {
-				if(owner instanceof InstructionBlockable) {
-					owner = ((InstructionBlockable) owner).getParent();
-				}
-			}
-
-			name = namespace.get(name);
-			return new String[] {"function " + name};
+		String[] commands = new String[size + 1];
+		for(int i = 0;i < size;i++) {
+			commands[i] = prepare.get(i);
 		}
-	}
+		commands[commands.length - 1] = String.format("function %s", namespace.get(function.getFullName()));
 
+		return commands;
+	}
 }

@@ -7,6 +7,10 @@ import mcfp.instruction.FunctionCaller.FunctionInfo;
 
 public class MCFPFinder {
 
+	/**
+	 * 与えられた情報を用いてcaller目線から関数を検索します
+	 * このときオーバーロードに対応します
+	 */
 	public static MCFPFunction findFunction(FunctionInfo info, MCFPClass caller) {
 		MCFPClassLoader classloader = caller.getClassLoader();
 
@@ -16,10 +20,10 @@ public class MCFPFinder {
 
 			//thisは呼び出しクラスで確定
 			if(className.equals("this")) {
-				return searchFunction(info.getFunctionName(), caller);
+				return searchFunction(info.getFunctionName(), info.getArgumentCount(), caller);
 			}else {
 				MCFPClass mcfpClass = classloader.getClassByFullName(info.getClassName());
-				return searchFunction(info.getFunctionName(), mcfpClass);
+				return searchFunction(info.getFunctionName(), info.getArgumentCount(), mcfpClass);
 			}
 		//クラス名が確定していないので検索
 		}else {
@@ -27,27 +31,27 @@ public class MCFPFinder {
 			MCFPFunction result = null;
 
 			//まずは呼び出しクラスから検索
-			result = searchFunction(funcName, caller);
+			result = searchFunction(funcName, info.getArgumentCount(), caller);
 			if(result != null) return result;
 
 			//インポート先から検索
 			for(MCFPClass mcfpClass : getImportedClasses(caller)) {
-				result = searchFunction(funcName, mcfpClass);
+				result = searchFunction(funcName, info.getArgumentCount(), mcfpClass);
 				if(result != null) return result;
 			}
 
-			return null;
+			throw new SyntaxException(info.getFunctionName() + "(" + info.getArgumentCount() + ") is not defined");
 		}
 	}
 
-	private static MCFPFunction searchFunction(String name, MCFPClass mcfpClass) {
+	private static MCFPFunction searchFunction(String name, int args, MCFPClass mcfpClass) {
 		for(MCFPFunction function : mcfpClass.getFunctions()) {
-			if(function.getName().equals(name)) {
+			if(function.getName().equals(name) && function.getArgumentNames().length == args) {
 				return function;
 			}
 		}
 
-		return null;
+		throw new SyntaxException(name + "(" + args + ") is not defined");
 	}
 
 //	public static MCFPClass findClass(String name, MCFPClass caller) {

@@ -228,14 +228,22 @@ public class Calculator {
 						Object obj = stack.pop();
 						if(obj instanceof Integer) {
 							throw new SyntaxException("value cannot contains value");
-						}else {
+						}else if(FunctionCaller.isFunction(obj.toString())){
+							throw new SyntaxException("function cannot contains value");
+						}else{
 							stack.push(obj);
 							left = popValue(stack, reserveList, namespace, holder);
 						}
 
 						if(right.matches("[0-9]+")) {
 							result.add(String.format("scoreboard players set %s var %s", left, right));
-						}else {
+						}else if(FunctionCaller.isFunction(right)){
+							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+							MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+							result.add(String.format("function %s", namespace.get(function.getFullName())));
+							result.add(String.format("scoreboard players operation %s var = result var", left));
+						}else{
 							result.add(String.format("scoreboard players operation %s var = %s var", left, right));
 						}
 
@@ -247,7 +255,13 @@ public class Calculator {
 
 						if(left.matches("[0-9]+")) {
 							result.add(String.format("scoreboard players set temp%08x var %s", tempId, left));
-						}else {
+						}else if(FunctionCaller.isFunction(left)){
+							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(left);
+							MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+							result.add(String.format("function %s", namespace.get(function.getFullName())));
+							result.add(String.format("scoreboard players operation temp%08x var = result var", tempId));
+						}else{
 							result.add(String.format("scoreboard players operation temp%08x var = %s var", tempId, left));
 						}
 
@@ -260,6 +274,12 @@ public class Calculator {
 								result.add(String.format("scoreboard players set temp var %s", right));
 								result.add(String.format("scoreboard players operation temp%08x var %s= temp var", tempId, token));
 							}
+						}else if(FunctionCaller.isFunction(right)){
+							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+							MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+							result.add(String.format("function %s", namespace.get(function.getFullName())));
+							result.add(String.format("scoreboard players operation temp%08x var = result var", tempId));
 						}else {
 							result.add(String.format("scoreboard players operation temp%08x var %s= %s var", tempId, token, right));
 						}
@@ -274,9 +294,23 @@ public class Calculator {
 					if(left.matches("[0-9]+")) {
 						result.add(String.format("scoreboard players left var %s", left));
 						left = "left";
+					}else if(FunctionCaller.isFunction(left)) {
+						FunctionCaller.FunctionInfo info = FunctionCaller.analyze(left);
+						MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+						result.add(String.format("function ", namespace.get(function.getFullName())));
+						result.add("scoreboard players operation left var = result var");
+						left = "left";
 					}
 					if(right.matches("[0-9]+")) {
 						result.add(String.format("scoreboard players right var %s", right));
+						right = "right";
+					}else if(FunctionCaller.isFunction(left)) {
+						FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+						MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+						result.add(String.format("function ", namespace.get(function.getFullName())));
+						result.add("scoreboard players operation right var = result var");
 						right = "right";
 					}
 
@@ -329,15 +363,14 @@ public class Calculator {
 		if(str.matches("[0-9]+")){
 			return str;
 		}else if(FunctionCaller.isFunction(str)){
-			return convertName(str, namespace, holder);
+			return str;
 		}else{
 			return convertName(str, namespace, holder);
 		}
 	}
 
 	private static String convertName(String name, Namespace namespace, INamed holder) {
-		String fqvn = holder.getFullName() + "." + name;
-		String result = namespace.searchLastDefined(fqvn);
+		String result = namespace.searchLastDefined(name, holder);
 
 		if(result == null) {
 			return namespace.add(name, holder);

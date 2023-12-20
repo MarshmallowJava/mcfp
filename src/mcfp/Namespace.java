@@ -58,6 +58,10 @@ public class Namespace {
 		return this.map;
 	}
 
+	public String searchLastDefined(String name, INamed holder) {
+		return this.searchLastDefined(holder.getFullName() + "." + name);
+	}
+
 	/**
 	 * 指定の変数名の内最も深い階層で定義されたものの完全名を返却します
 	 */
