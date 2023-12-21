@@ -84,7 +84,7 @@ public class MCFPCompiler {
 		this.buff.clear();
 	}
 
-	public MCFPClassLoader getClassLoader() {
+	public MCFPClassLoader getMCFPClassLoader() {
 		return this.classloader;
 	}
 }

@@ -1,6 +1,10 @@
 .project
 .classpath
 .settings/*
+build.bat
+build.xml
+mcfpc.exe
+mcfpc.jar
 bin/*
 mcfpsrc/*
 output/*

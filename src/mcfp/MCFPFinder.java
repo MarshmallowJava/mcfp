@@ -12,7 +12,7 @@ public class MCFPFinder {
 	 * このときオーバーロードに対応します
 	 */
 	public static MCFPFunction findFunction(FunctionInfo info, MCFPClass caller) {
-		MCFPClassLoader classloader = caller.getClassLoader();
+		MCFPClassLoader classloader = caller.getMCFPClassLoader();
 
 		//クラス名が指定されているか
 		if(info.isObviousClassName()) {
@@ -67,7 +67,7 @@ public class MCFPFinder {
 	private static List<MCFPClass> getImportedClasses(MCFPClass mcfpClass){
 		List<MCFPClass> list = new ArrayList<>();
 
-		MCFPClassLoader classloader = mcfpClass.getClassLoader();
+		MCFPClassLoader classloader = mcfpClass.getMCFPClassLoader();
 		for(String name : mcfpClass.getImportSource()) {
 			String[] nameList = splitName(name);
 			String namespace = nameList[0];

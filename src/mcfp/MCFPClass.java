@@ -56,7 +56,7 @@ public class MCFPClass implements INamed{
 		return this.importSource;
 	}
 
-	public MCFPClassLoader getClassLoader() {
+	public MCFPClassLoader getMCFPClassLoader() {
 		return this.classloader;
 	}
 

@@ -222,8 +222,8 @@ public class Calculator {
 
 				if(type == Type.INTEGER) {
 					if(token.equals("=")) {
-						String right = popValue(stack, reserveList, namespace, holder);
-						String left = null;
+						Object right = popValue(stack, reserveList, namespace, holder);
+						Object left = null;
 
 						Object obj = stack.pop();
 						if(obj instanceof Integer) {
@@ -235,10 +235,10 @@ public class Calculator {
 							left = popValue(stack, reserveList, namespace, holder);
 						}
 
-						if(right.matches("[0-9]+")) {
-							result.add(String.format("scoreboard players set %s var %s", left, right));
-						}else if(FunctionCaller.isFunction(right)){
-							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+						if(right instanceof Integer) {
+							result.add(String.format("scoreboard players set %s var %d", left, right));
+						}else if(right instanceof FunctionCaller.FunctionInfo){
+							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) right;
 							MCFPFunction function = MCFPFinder.findFunction(info, caller);
 
 							result.add(String.format("function %s", namespace.get(function.getFullName())));
@@ -250,13 +250,13 @@ public class Calculator {
 						stack.push(obj);
 					}else {
 						int tempId = reserveTemp(reserveList);
-						String right = popValue(stack, reserveList, namespace, holder);
-						String left = popValue(stack, reserveList, namespace, holder);
+						Object right = popValue(stack, reserveList, namespace, holder);
+						Object left = popValue(stack, reserveList, namespace, holder);
 
-						if(left.matches("[0-9]+")) {
-							result.add(String.format("scoreboard players set temp%08x var %s", tempId, left));
-						}else if(FunctionCaller.isFunction(left)){
-							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(left);
+						if(left instanceof Integer) {
+							result.add(String.format("scoreboard players set temp%08x var %d", tempId, left));
+						}else if(left instanceof FunctionCaller.FunctionInfo){
+							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) left;
 							MCFPFunction function = MCFPFinder.findFunction(info, caller);
 
 							result.add(String.format("function %s", namespace.get(function.getFullName())));
@@ -265,17 +265,17 @@ public class Calculator {
 							result.add(String.format("scoreboard players operation temp%08x var = %s var", tempId, left));
 						}
 
-						if(right.matches("[0-9]+")) {
+						if(right instanceof Integer) {
 							if(token.equals("+")) {
-								result.add(String.format("scoreboard players add temp%08x var %s", tempId, right));
+								result.add(String.format("scoreboard players add temp%08x var %d", tempId, right));
 							}else if(token.equals("-")){
-								result.add(String.format("scoreboard players remove temp%08x var %s", tempId, right));
+								result.add(String.format("scoreboard players remove temp%08x var %d", tempId, right));
 							}else {
 								result.add(String.format("scoreboard players set temp var %s", right));
 								result.add(String.format("scoreboard players operation temp%08x var %s= temp var", tempId, token));
 							}
-						}else if(FunctionCaller.isFunction(right)){
-							FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+						}else if(right instanceof FunctionCaller.FunctionInfo){
+							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo)right;
 							MCFPFunction function = MCFPFinder.findFunction(info, caller);
 
 							result.add(String.format("function %s", namespace.get(function.getFullName())));
@@ -288,25 +288,25 @@ public class Calculator {
 					}
 				}else if(type == Type.BOOL){
 					int tempId = reserveTemp(reserveList);
-					String right = popValue(stack, reserveList, namespace, holder);
-					String left = popValue(stack, reserveList, namespace, holder);
+					Object right = popValue(stack, reserveList, namespace, holder);
+					Object left = popValue(stack, reserveList, namespace, holder);
 
-					if(left.matches("[0-9]+")) {
-						result.add(String.format("scoreboard players left var %s", left));
+					if(left instanceof Integer) {
+						result.add(String.format("scoreboard players left var %d", left));
 						left = "left";
-					}else if(FunctionCaller.isFunction(left)) {
-						FunctionCaller.FunctionInfo info = FunctionCaller.analyze(left);
+					}else if(left instanceof FunctionCaller.FunctionInfo) {
+						FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) left;
 						MCFPFunction function = MCFPFinder.findFunction(info, caller);
 
 						result.add(String.format("function ", namespace.get(function.getFullName())));
 						result.add("scoreboard players operation left var = result var");
 						left = "left";
 					}
-					if(right.matches("[0-9]+")) {
-						result.add(String.format("scoreboard players right var %s", right));
+					if(right instanceof Integer) {
+						result.add(String.format("scoreboard players right var %d", right));
 						right = "right";
-					}else if(FunctionCaller.isFunction(left)) {
-						FunctionCaller.FunctionInfo info = FunctionCaller.analyze(right);
+					}else if(right instanceof FunctionCaller.FunctionInfo) {
+						FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo)right;
 						MCFPFunction function = MCFPFinder.findFunction(info, caller);
 
 						result.add(String.format("function ", namespace.get(function.getFullName())));
@@ -350,7 +350,19 @@ public class Calculator {
 		return result.toArray(new String[0]);
 	}
 
-	private static String popValue(Stack<Object> stack, List<Integer> reserveList, Namespace namespace, INamed holder) {
+	/**
+	 * スタックから値を取り出します
+	 * 返却型によって解釈を変更してください
+	 * String -> 変数
+	 * int -> 定数
+	 * FunctionCaller.FunctionInfo -> 関数
+	 * @param stack
+	 * @param reserveList
+	 * @param namespace
+	 * @param holder
+	 * @return
+	 */
+	private static Object popValue(Stack<Object> stack, List<Integer> reserveList, Namespace namespace, INamed holder) {
 		Object obj = stack.pop();
 		if(obj instanceof Integer) {
 			int value = (int) obj;
@@ -361,9 +373,9 @@ public class Calculator {
 		String str = obj.toString();
 
 		if(str.matches("[0-9]+")){
-			return str;
+			return Integer.parseInt(str);
 		}else if(FunctionCaller.isFunction(str)){
-			return str;
+			return FunctionCaller.analyze(str);
 		}else{
 			return convertName(str, namespace, holder);
 		}
