@@ -1,7 +1,6 @@
 package mcfp.instruction;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +79,7 @@ public class InstructionMacro extends Instruction implements INamed{
 		MCFPDummyFunction func = new MCFPDummyFunction();
 		func.add(new InstructionSimple("$" + this.data, this.getCaller()));
 
-		compiler.writeFunction(new File("output/" + name + ".mcfunction"), func);
+		compiler.writeFunction(name, func);
 	}
 
 	@Override

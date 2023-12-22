@@ -60,6 +60,16 @@ public class MCFPClass implements INamed{
 		return this.classloader;
 	}
 
+	public MCFPFunction getFunction(String name) {
+		for(MCFPFunction function : this.functions) {
+			if(function.getName().equals(name)) {
+				return function;
+			}
+		}
+
+		return null;
+	}
+
 	@Override
 	public String getFullName() {
 		if(this.namespace.isEmpty()) {
@@ -67,5 +77,10 @@ public class MCFPClass implements INamed{
 		}else {
 			return this.namespace + ".c" + this.name;
 		}
+	}
+	
+	@Override
+	public String toString() {
+		return this.getFQCN();
 	}
 }

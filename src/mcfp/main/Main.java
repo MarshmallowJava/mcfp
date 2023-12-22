@@ -42,18 +42,21 @@ public class Main {
 	}
 
 	public static void compile(File folder, String output) throws IOException {
+		//コンパイラを起動
 		MCFPCompiler compiler = new MCFPCompiler(Version.MC1_20_2);
 
+		//ファイルを追加
 		for(File file : getFiles(folder, new FileFilter() {
 			@Override
 			public boolean accept(File pathname) {
-				return pathname.getName().endsWith(".mcfp");
+				return pathname.getName().endsWith(".mcfp") || pathname.isDirectory();
 			}
 		})) {
 			compiler.addFile(file);
 		}
 
-		compiler.run(output);
+		//コンパイル開始
+		compiler.run(output, folder.getAbsolutePath());
 	}
 
 	public static List<File> getFiles(File file, FileFilter filter) {

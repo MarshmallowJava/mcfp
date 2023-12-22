@@ -1,7 +1,6 @@
 package mcfp.instruction;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -38,7 +37,7 @@ public abstract class InstructionBlockable extends Instruction implements INamed
 
 		Namespace namespace = compiler.getMCFPClassLoader().getNamespace();
 		String name = namespace.add(this);
-		compiler.writeFunction(new File("output/" + name + ".mcfunction"), this.contents);
+		compiler.writeFunction(name, this.contents);
 	}
 
 	public List<Instruction> getInstructions(){

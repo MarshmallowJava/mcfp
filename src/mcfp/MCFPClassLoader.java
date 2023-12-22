@@ -27,7 +27,7 @@ public class MCFPClassLoader {
 	 * 指定されたファイルを読み込みます
 	 * @param file ファイルパス
 	 */
-	public MCFPClass loadFile(File file) throws IOException{
+	public MCFPClass loadFile(File file, String namespace) throws IOException{
 		try (FileReader fr = new FileReader(file);BufferedReader br = new BufferedReader(fr);){
 
 			//まずはインデントとデータを獲得
@@ -50,7 +50,7 @@ public class MCFPClassLoader {
 			putNode(roughData.createCursor(), master);
 
 			//ノード形式からインスタンスに変換
-			MCFPClass mcfpClass = this.loadClass(master);
+			MCFPClass mcfpClass = this.loadClass(master, namespace);
 
 			this.loadedClasses.add(mcfpClass);
 
@@ -85,12 +85,12 @@ public class MCFPClassLoader {
 		}
 	}
 
-	private MCFPClass loadClass(Node<String> master) {
+	private MCFPClass loadClass(Node<String> master, String namespace) {
 		String title = master.getData();
 		String name = title.substring(title.lastIndexOf(" ") + 1, title.lastIndexOf(":")).trim();
 		List<String> importSource = new ArrayList<>();
 
-		MCFPClass mcfpClass = new MCFPClass(name, "", importSource,this);
+		MCFPClass mcfpClass = new MCFPClass(name, namespace, importSource,this);
 
 		for(Node<String> child : master.getChildren()) {
 			String title2 = child.getData();
@@ -99,7 +99,7 @@ public class MCFPClassLoader {
 				MCFPFunction func = this.loadFunction(child, mcfpClass);
 				mcfpClass.addFunction(func);
 			}else if(isClass(title2)){
-				mcfpClass.addSubClass(this.loadClass(child));
+				mcfpClass.addSubClass(this.loadClass(child, namespace));
 			}else if(isImport(title2)){
 				title2 = title2.trim();
 				importSource.add(title2.substring(title.lastIndexOf(" ") + 1).trim());
@@ -131,11 +131,16 @@ public class MCFPClassLoader {
 		function.setParentClass(owner);
 
 		for(Node<String> node : master.getChildren()) {
-			Instruction instruction = Instruction.toInstruction(node, this.version, owner);
-			if(instruction == null) {
-				throw new SyntaxException("Unsolve instruction was found");
-			}else {
-				function.addInstruction(instruction);
+			try {
+				Instruction instruction = Instruction.toInstruction(node, this.version, owner);
+				if(instruction == null) {
+					throw new SyntaxException("Unsolve instruction was found");
+				}else {
+					function.addInstruction(instruction);
+				}
+			}catch(Exception e) {
+				System.out.println("failed to read: " + node.getData());
+				throw e;
 			}
 		}
 
@@ -160,7 +165,7 @@ public class MCFPClassLoader {
 	}
 
 	private static boolean isImport(String data) {
-		return data.matches("import\\s+[0-9A-Za-z_.]+\\s*");
+		return data.matches("import\\s+[0-9A-Za-z_\\.\\*]+\\s*");
 	}
 
 	public Namespace getNamespace() {

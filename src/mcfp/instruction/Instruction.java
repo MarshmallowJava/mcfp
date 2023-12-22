@@ -21,10 +21,10 @@ public abstract class Instruction {
 		instructions.add(InstructionReturn::condition, InstructionReturn::supply);
 		instructions.add(InstructionMacro::condition, InstructionMacro::supply);
 		instructions.add(InstructionSimple::condition, InstructionSimple::supply);
-		instructions.add(InstructionFunction::condition, InstructionFunction::supply);
-		instructions.add(InstructionArithmetic::condition, InstructionArithmetic::supply);
 		instructions.add(InstructionIf::condition, InstructionIf::supply);
 		instructions.add(InstructionWhile::condition, InstructionWhile::supply);
+		instructions.add(InstructionFunction::condition, InstructionFunction::supply);
+		instructions.add(InstructionArithmetic::condition, InstructionArithmetic::supply);
 	}
 
 	private INamed parent;

@@ -23,6 +23,7 @@ public class MCFPFinder {
 				return searchFunction(info.getFunctionName(), info.getArgumentCount(), caller);
 			}else {
 				MCFPClass mcfpClass = classloader.getClassByFullName(info.getClassName());
+
 				return searchFunction(info.getFunctionName(), info.getArgumentCount(), mcfpClass);
 			}
 		//クラス名が確定していないので検索
@@ -51,7 +52,7 @@ public class MCFPFinder {
 			}
 		}
 
-		throw new SyntaxException(name + "(" + args + ") is not defined");
+		return null;
 	}
 
 //	public static MCFPClass findClass(String name, MCFPClass caller) {
