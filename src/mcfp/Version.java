@@ -1,8 +1,8 @@
 package mcfp;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,7 +31,8 @@ public class Version {
 	}
 
 	private static String[] loadData(String name) {
-		try(FileReader fr = new FileReader(String.format("versions/%s.txt", name));BufferedReader br = new BufferedReader(fr);){
+
+		try(InputStreamReader isr = new InputStreamReader(Version.class.getClassLoader().getResourceAsStream(String.format("versions/%s.txt", name)));BufferedReader br = new BufferedReader(isr);){
 			List<String> buff = new ArrayList<>();
 
 			String data;

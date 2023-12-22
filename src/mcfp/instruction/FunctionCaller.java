@@ -11,6 +11,7 @@ import mcfp.MCFPFinder;
 import mcfp.MCFPFunction;
 import mcfp.Namespace;
 import mcfp.SyntaxException;
+import mcfp.Version;
 import mcfp.instruction.arithmetic.Calculator;
 
 /**
@@ -19,7 +20,7 @@ import mcfp.instruction.arithmetic.Calculator;
  */
 public class FunctionCaller {
 
-	public static FunctionInfo analyze(String data) {
+	public static FunctionInfo analyze(String data, Version version) {
 		if(!isFunction(data)) throw new SyntaxException(data + ": is not function");
 		data = data.trim();
 
@@ -29,11 +30,11 @@ public class FunctionCaller {
 
 		for(String arg : arguments) {
 			if(isFunction(arg)) {
-				args.add(analyze(arg));
+				args.add(analyze(arg, version));
 			}else if(arg.matches("[0-9A-Za-z_]+")){
 				args.add(arg);
-			}else if(Calculator.isFormula(arg)){
-				args.add(Calculator.convert(arg));
+			}else if(Calculator.isFormula(arg, version)){
+				args.add(Calculator.convert(arg, version));
 			}else {
 			}
 		}
@@ -81,7 +82,7 @@ public class FunctionCaller {
 	}
 
 	@SuppressWarnings("unchecked")
-	public static List<String> prepare(FunctionInfo info, INamed owner, MCFPClass caller, Namespace namespace){
+	public static List<String> prepare(FunctionInfo info, INamed owner, MCFPClass caller, Namespace namespace, Version version){
 		List<String> commands = new ArrayList<>();
 
 		MCFPFunction function = MCFPFinder.findFunction(info, caller);
@@ -102,7 +103,7 @@ public class FunctionCaller {
 				if(data.matches("[0-9]+")) {
 					commands.add(String.format("scoreboard players set %s var %s", varname, data));
 				}else {
-					commands.add(String.format("scoreboard players set %s var %s", varname, namespace.searchLastDefined(data, owner)));
+					commands.add(String.format("scoreboard players operation %s var = %s var", varname, namespace.get(namespace.searchLastDefined(data, owner))));
 				}
 			}
 
@@ -112,7 +113,7 @@ public class FunctionCaller {
 				MCFPFunction function2 = MCFPFinder.findFunction(info2, caller);
 
 				//呼び出し
-				commands.addAll(prepare(info2, owner, caller, namespace));
+				commands.addAll(prepare(info2, owner, caller, namespace, version));
 				commands.add(String.format("function %s", namespace.get(function2.getFullName())));
 
 				//結果を代入
@@ -121,7 +122,7 @@ public class FunctionCaller {
 
 			//数式
 			if(arg instanceof List) {
-				commands.addAll(Arrays.asList(Calculator.toCommands((List<String>)arg, "$" + varname, namespace, owner, caller)));
+				commands.addAll(Arrays.asList(Calculator.toCommands((List<String>)arg, "$" + varname, namespace, owner, caller, version)));
 			}
 		}
 

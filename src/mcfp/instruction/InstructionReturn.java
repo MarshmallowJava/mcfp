@@ -13,9 +13,9 @@ public class InstructionReturn extends Instruction{
 
 	private List<String> formula;
 
-	public InstructionReturn(String data, MCFPClass caller) {
+	public InstructionReturn(String data, MCFPClass caller, Version version) {
 		super(caller);
-		this.formula = Calculator.convert(data.substring("return".length()).trim());
+		this.formula = Calculator.convert(data.substring("return".length()).trim(), version);
 	}
 
 	public static boolean condition(String data, Version version) {
@@ -23,11 +23,11 @@ public class InstructionReturn extends Instruction{
 	}
 
 	public static Instruction supply(Node<String> data, Version version, MCFPClass caller) {
-		return new InstructionReturn(data.getData(), caller);
+		return new InstructionReturn(data.getData(), caller, version);
 	}
 
 	@Override
 	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
-		return Calculator.toCommands(formula, "$result", namespace, this.getNameHolder(), this.getCaller());
+		return Calculator.toCommands(formula, "$result", namespace, this.getNameHolder(), this.getCaller(), classloader.getVersion());
 	}
 }

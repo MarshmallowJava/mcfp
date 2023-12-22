@@ -47,7 +47,7 @@ public abstract class Instruction {
 	}
 
 	public void writeCommands(BufferedWriter writer, MCFPCompiler compiler) throws IOException {
-		MCFPClassLoader classloader = compiler.getClassLoader();
+		MCFPClassLoader classloader = compiler.getMCFPClassLoader();
 
 		for(String cmd : this.toCommands(classloader, classloader.getNamespace())) {
 			writer.write(cmd);

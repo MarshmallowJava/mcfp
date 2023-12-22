@@ -36,7 +36,7 @@ public abstract class InstructionBlockable extends Instruction implements INamed
 	public void writeCommands(BufferedWriter writer, MCFPCompiler compiler) throws IOException {
 		super.writeCommands(writer, compiler);
 
-		Namespace namespace = compiler.getClassLoader().getNamespace();
+		Namespace namespace = compiler.getMCFPClassLoader().getNamespace();
 		String name = namespace.add(this);
 		compiler.writeFunction(new File("output/" + name + ".mcfunction"), this.contents);
 	}

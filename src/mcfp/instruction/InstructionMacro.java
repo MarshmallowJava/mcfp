@@ -35,6 +35,7 @@ public class InstructionMacro extends Instruction implements INamed{
 			if(ch == '$') {
 				if(i < size - 1) {
 					char ch1 = this.data.charAt(i + 1);
+
 					if(ch1 == '(') {
 						i++;
 
@@ -73,7 +74,7 @@ public class InstructionMacro extends Instruction implements INamed{
 	public void writeCommands(BufferedWriter writer, MCFPCompiler compiler) throws IOException {
 		super.writeCommands(writer, compiler);
 
-		Namespace namespace = compiler.getClassLoader().getNamespace();
+		Namespace namespace = compiler.getMCFPClassLoader().getNamespace();
 		String name = namespace.add(this);
 
 		MCFPDummyFunction func = new MCFPDummyFunction();

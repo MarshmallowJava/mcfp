@@ -19,7 +19,7 @@ public class InstructionArithmetic extends Instruction{
 
 	public static boolean condition(String data, Version version) {
 		try {
-			Calculator.checkType(data.substring(data.indexOf("=") + 1));
+			Calculator.checkType(data.substring(data.indexOf("=") + 1), version);
 			return true;
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -37,7 +37,7 @@ public class InstructionArithmetic extends Instruction{
 
 	@Override
 	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
-		return Calculator.toCommands(this.formula, this.to, namespace, this.getNameHolder(), this.getCaller());
+		return Calculator.toCommands(this.formula, this.to, namespace, this.getNameHolder(), this.getCaller(), classloader.getVersion());
 	}
 
 	@Override

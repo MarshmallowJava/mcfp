@@ -167,6 +167,10 @@ public class MCFPClassLoader {
 		return this.namespace;
 	}
 
+	public Version getVersion() {
+		return this.version;
+	}
+
 	public List<MCFPClass> getLoadedClasses() {
 		return this.loadedClasses;
 	}

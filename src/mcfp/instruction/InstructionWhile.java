@@ -21,12 +21,12 @@ public class InstructionWhile extends InstructionBlockable{
 
 		String data = node.getData();
 		String condition = data.substring(data.indexOf("(") + 1, data.lastIndexOf(")")).trim();
-		List<String> formula = Calculator.convert(condition);
+		List<String> formula = Calculator.convert(condition, version);
 
-		if(Calculator.checkType(formula) == Type.BOOL) {
+		if(Calculator.checkType(formula, version) == Type.BOOL) {
 			this.condition = formula;
 			this.index = node.getParent().indexOf(node);
-			this.contents.add(new InstructionGoto(this, condition, caller));
+			this.contents.add(new InstructionGoto(this, condition, caller, version));
 		}else {
 			throw new SyntaxException("condition formula type should be bool");
 		}
@@ -42,7 +42,7 @@ public class InstructionWhile extends InstructionBlockable{
 
 	@Override
 	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
-		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder(), this.getCaller());
+		String[] conditions = Calculator.toCommands(this.condition, "$condition", namespace, this.getNameHolder(), this.getCaller(), classloader.getVersion());
 		String[] result = new String[conditions.length + 1];
 
 		for(int i = 0;i < conditions.length;i++) {

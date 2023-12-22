@@ -3,7 +3,7 @@ package mcfp;
 import java.util.ArrayList;
 import java.util.List;
 
-import mcfp.instruction.FunctionCaller.FunctionInfo;
+import mcfp.instruction.FunctionCaller;
 
 public class MCFPFinder {
 
@@ -11,7 +11,7 @@ public class MCFPFinder {
 	 * 与えられた情報を用いてcaller目線から関数を検索します
 	 * このときオーバーロードに対応します
 	 */
-	public static MCFPFunction findFunction(FunctionInfo info, MCFPClass caller) {
+	public static MCFPFunction findFunction(FunctionCaller.FunctionInfo info, MCFPClass caller) {
 		MCFPClassLoader classloader = caller.getMCFPClassLoader();
 
 		//クラス名が指定されているか

@@ -6,6 +6,7 @@ import mcfp.MCFPClass;
 import mcfp.MCFPClassLoader;
 import mcfp.Namespace;
 import mcfp.SyntaxException;
+import mcfp.Version;
 import mcfp.instruction.arithmetic.Calculator;
 import mcfp.instruction.arithmetic.Type;
 
@@ -14,20 +15,20 @@ public class InstructionGoto extends Instruction{
 	private InstructionBlockable target;
 	private List<String> condition;
 
-	public InstructionGoto(InstructionBlockable target, String condition, MCFPClass caller) {
+	public InstructionGoto(InstructionBlockable target, String condition, MCFPClass caller, Version version) {
 		super(caller);
 
 		this.target = target;
-		this.condition = Calculator.convert(condition);
+		this.condition = Calculator.convert(condition, version);
 
-		if(Calculator.checkType(this.condition) != Type.BOOL) {
+		if(Calculator.checkType(this.condition, version) != Type.BOOL) {
 			throw new SyntaxException("this area should be bool.");
 		}
 	}
 
 	@Override
 	public String[] toCommands(MCFPClassLoader classloader, Namespace namespace) {
-		String[] condition = Calculator.toCommands(this.condition, namespace, this.target, this.getCaller());
+		String[] condition = Calculator.toCommands(this.condition, namespace, this.target, this.getCaller(), classloader.getVersion());
 		String[] result = new String[condition.length + 1];
 
 		for(int i = 0;i < condition.length;i++) {

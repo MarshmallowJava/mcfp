@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Stack;
 
 import mcfp.INamed;
@@ -14,7 +13,9 @@ import mcfp.MCFPFinder;
 import mcfp.MCFPFunction;
 import mcfp.Namespace;
 import mcfp.SyntaxException;
+import mcfp.Version;
 import mcfp.instruction.FunctionCaller;
+import mcfp.instruction.MacroCaller;
 
 public class Calculator {
 
@@ -40,9 +41,9 @@ public class Calculator {
 		PRIORITIES.put("%", 3);
 	}
 
-	public static boolean isFormula(String data) {
+	public static boolean isFormula(String data, Version version) {
 		try {
-			checkType(data);
+			checkType(data, version);
 			return true;
 		}catch(Exception e) {
 			return false;
@@ -50,14 +51,40 @@ public class Calculator {
 	}
 
 	//逆ポーランド記法に変換します
-	public static List<String> convert(String formula){
+	public static List<String> convert(String formula, Version version){
 		List<String> src = new ArrayList<>();
 
-		try(Scanner scanner = new Scanner(new StringReader(formula));){
-			scanner.useDelimiter("\\s*");
+		try(StringReader sr = new StringReader(formula);){
+			for(int i = 0;i < formula.length();i++) {
+				char ch = formula.charAt(i);
 
-			while(scanner.hasNext()) {
-				src.add(scanner.next());
+				if(String.valueOf(ch).matches("\\s+")) continue;
+				src.add(String.valueOf(ch));
+
+				if(ch == '$') {
+					if(i < formula.length() - 1) {
+						char ch1 = formula.charAt(i + 1);
+						if(ch1 == '(') {
+							int layer = 0;
+							while(true) {
+								char ch2 = formula.charAt(++i);
+
+								if(ch2 == '(') {
+									layer++;
+									src.add(String.valueOf(ch2));
+								}else if(ch2 == ')'){
+									layer--;
+									src.add(String.valueOf(ch2));
+									if(layer == 0) {
+										break;
+									}
+								}else {
+									src.add(String.valueOf(ch2));
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 
@@ -68,7 +95,7 @@ public class Calculator {
 			int type = -1, layer = 0;
 
 			for(String token : src) {
-				int tokenType = token.matches("[a-zA-Z0-9\\.]") ? TYPE_STRING : token.matches("[<>!=]") ? TYPE_COMPARE : TYPE_FORMULA;
+				int tokenType = token.matches("[a-zA-Z0-9\\.$\\s]") ? TYPE_STRING : token.matches("[<>!=]") ? TYPE_COMPARE : TYPE_FORMULA;
 
 				if(buff == null) {
 					buff = token;
@@ -104,7 +131,7 @@ public class Calculator {
 		Stack<String> stack = new Stack<>();
 
 		for(String token : src) {
-			if(token.matches("[0-9A-Za-z_]+") || FunctionCaller.isFunction(token)) {
+			if(token.matches("[0-9A-Za-z_]+") || FunctionCaller.isFunction(token) || MacroCaller.isMacro(token, version)) {
 				output.add(token);
 			}else if(token.equals("(")) {
 				stack.push(token);
@@ -145,17 +172,17 @@ public class Calculator {
 		}
 	}
 
-	public static Type checkType(String formula) {
-		return checkType(convert(formula));
+	public static Type checkType(String formula, Version version) {
+		return checkType(convert(formula, version), version);
 	}
 
-	public static Type checkType(List<String> formula) {
+	public static Type checkType(List<String> formula, Version version) {
 		Stack<Object> stack = new Stack<>();
 
 		for(String token : formula) {
 			if(isValidFormula(token)) {
-				Type right = getType(stack.pop());
-				Type left = getType(stack.pop());
+				Type right = getType(stack.pop(), version);
+				Type left = getType(stack.pop(), version);
 				Type resultType = getType2(token);
 
 				if(token.matches("&|\\|") && (right != Type.BOOL || left != Type.BOOL)) {
@@ -170,14 +197,14 @@ public class Calculator {
 				stack.push(token);
 			}
 		}
-		return getType(stack.pop());
+		return getType(stack.pop(), version);
 	}
 
-	private static Type getType(Object obj) {
+	private static Type getType(Object obj, Version version) {
 		if(obj instanceof Type) return ((Type)obj);
 
 		String token = (String) obj;
-		if(token.matches("[a-zA-Z0-9]+") || FunctionCaller.isFunction(token)) return Type.INTEGER;
+		if(token.matches("[a-zA-Z0-9]+") || FunctionCaller.isFunction(token) || MacroCaller.isMacro(token, version)) return Type.INTEGER;
 
 		throw new SyntaxException(token + ": is not formula elememt");
 	}
@@ -194,16 +221,16 @@ public class Calculator {
 		return PRIORITIES.containsKey(token);
 	}
 
-	public static String[] toCommands(String formula, Namespace namespace, INamed holder, MCFPClass caller) {
-		return toCommands(convert(formula), namespace, holder, caller);
+	public static String[] toCommands(String formula, Namespace namespace, INamed holder, MCFPClass caller, Version version) {
+		return toCommands(convert(formula, version), namespace, holder, caller, version);
 	}
 
-	public static String[] toCommands(String formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller) {
-		return toCommands(convert(formula), resultName, namespace, holder, caller);
+	public static String[] toCommands(String formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller, Version version) {
+		return toCommands(convert(formula, version), resultName, namespace, holder, caller, version);
 	}
 
-	public static String[] toCommands(List<String> formula, Namespace namespace, INamed holder, MCFPClass caller) {
-		return toCommands(formula, "$temp", namespace, holder, caller);
+	public static String[] toCommands(List<String> formula, Namespace namespace, INamed holder, MCFPClass caller, Version version) {
+		return toCommands(formula, "$temp", namespace, holder, caller, version);
 	}
 
 	/**
@@ -211,18 +238,19 @@ public class Calculator {
 	 * 最終的な式が整数値であればtemp[var]に格納
 	 * 最終的な式が真偽値であればtemp[var]に真であれば1, 偽であれば0が格納される
 	 */
-	public static String[] toCommands(List<String> formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller) {
+	public static String[] toCommands(List<String> formula, String resultName, Namespace namespace, INamed holder, MCFPClass caller, Version version) {
 		List<String> result = new ArrayList<>();
 		List<Integer> reserveList = new ArrayList<>();
 
 		Stack<Object> stack = new Stack<>();
 		for(String token : formula) {
+
 			if(isValidFormula(token)) {
 				Type type = getType2(token);
 
 				if(type == Type.INTEGER) {
 					if(token.equals("=")) {
-						Object right = popValue(stack, reserveList, namespace, holder);
+						Object right = popValue(stack, reserveList, namespace, holder, version);
 						Object left = null;
 
 						Object obj = stack.pop();
@@ -230,41 +258,26 @@ public class Calculator {
 							throw new SyntaxException("value cannot contains value");
 						}else if(FunctionCaller.isFunction(obj.toString())){
 							throw new SyntaxException("function cannot contains value");
-						}else{
+						}else if(MacroCaller.isMacro(obj.toString(), version)){
+							throw new SyntaxException("macro cannot contains value");
+						}else {
 							stack.push(obj);
-							left = popValue(stack, reserveList, namespace, holder);
+							left = popValue(stack, reserveList, namespace, holder, version);
 						}
 
-						if(right instanceof Integer) {
-							result.add(String.format("scoreboard players set %s var %d", left, right));
-						}else if(right instanceof FunctionCaller.FunctionInfo){
-							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) right;
-							MCFPFunction function = MCFPFinder.findFunction(info, caller);
-
-							result.add(String.format("function %s", namespace.get(function.getFullName())));
-							result.add(String.format("scoreboard players operation %s var = result var", left));
-						}else{
-							result.add(String.format("scoreboard players operation %s var = %s var", left, right));
-						}
+						//left(必ず変数)にrightの値を入れる
+						putValue(result, left.toString(), right, namespace, holder, caller, version);
 
 						stack.push(obj);
 					}else {
 						int tempId = reserveTemp(reserveList);
-						Object right = popValue(stack, reserveList, namespace, holder);
-						Object left = popValue(stack, reserveList, namespace, holder);
+						Object right = popValue(stack, reserveList, namespace, holder, version);
+						Object left = popValue(stack, reserveList, namespace, holder, version);
 
-						if(left instanceof Integer) {
-							result.add(String.format("scoreboard players set temp%08x var %d", tempId, left));
-						}else if(left instanceof FunctionCaller.FunctionInfo){
-							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) left;
-							MCFPFunction function = MCFPFinder.findFunction(info, caller);
+						//tempIdにleftの値を代入する
+						putValue(result, String.format("temp%08x", tempId), left, namespace, holder, caller, version);
 
-							result.add(String.format("function %s", namespace.get(function.getFullName())));
-							result.add(String.format("scoreboard players operation temp%08x var = result var", tempId));
-						}else{
-							result.add(String.format("scoreboard players operation temp%08x var = %s var", tempId, left));
-						}
-
+						//temp%08xにrightの値をもとに計算する
 						if(right instanceof Integer) {
 							if(token.equals("+")) {
 								result.add(String.format("scoreboard players add temp%08x var %d", tempId, right));
@@ -274,12 +287,14 @@ public class Calculator {
 								result.add(String.format("scoreboard players set temp var %s", right));
 								result.add(String.format("scoreboard players operation temp%08x var %s= temp var", tempId, token));
 							}
-						}else if(right instanceof FunctionCaller.FunctionInfo){
-							FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo)right;
-							MCFPFunction function = MCFPFinder.findFunction(info, caller);
+						}else if(canExecute(right, version)){
+							int tempId2 = reserveTemp(reserveList);
 
-							result.add(String.format("function %s", namespace.get(function.getFullName())));
-							result.add(String.format("scoreboard players operation temp%08x var = result var", tempId));
+							//tempId2に実行結果を代入する
+							putValue(result, String.format("temp%08x", tempId2), right, namespace, holder, caller, version);
+
+							//計算
+							result.add(String.format("scoreboard players operation temp%08x var %s= temp%08x var", tempId, token,tempId2));
 						}else {
 							result.add(String.format("scoreboard players operation temp%08x var %s= %s var", tempId, token, right));
 						}
@@ -288,29 +303,24 @@ public class Calculator {
 					}
 				}else if(type == Type.BOOL){
 					int tempId = reserveTemp(reserveList);
-					Object right = popValue(stack, reserveList, namespace, holder);
-					Object left = popValue(stack, reserveList, namespace, holder);
+					Object right = popValue(stack, reserveList, namespace, holder, version);
+					Object left = popValue(stack, reserveList, namespace, holder, version);
 
+					//leftに代入
 					if(left instanceof Integer) {
 						result.add(String.format("scoreboard players left var %d", left));
 						left = "left";
-					}else if(left instanceof FunctionCaller.FunctionInfo) {
-						FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) left;
-						MCFPFunction function = MCFPFinder.findFunction(info, caller);
-
-						result.add(String.format("function ", namespace.get(function.getFullName())));
-						result.add("scoreboard players operation left var = result var");
+					}else if(canExecute(left, version)) {
+						putValue(result, "left", left, namespace, holder, caller, version);
 						left = "left";
 					}
+
+					//rightに代入
 					if(right instanceof Integer) {
 						result.add(String.format("scoreboard players right var %d", right));
 						right = "right";
-					}else if(right instanceof FunctionCaller.FunctionInfo) {
-						FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo)right;
-						MCFPFunction function = MCFPFinder.findFunction(info, caller);
-
-						result.add(String.format("function ", namespace.get(function.getFullName())));
-						result.add("scoreboard players operation right var = result var");
+					}else if(canExecute(right, version)) {
+						putValue(result, "right", right, namespace, holder, caller, version);
 						right = "right";
 					}
 
@@ -330,24 +340,43 @@ public class Calculator {
 
 		resultName = convertName(resultName, namespace, holder);
 
-		Object lastData = stack.pop();
-		if(lastData instanceof String) {
-			String value = lastData.toString();
-			if(value.matches("[0-9]+")) {
-				result.add(String.format("scoreboard players set %s var %s", resultName, lastData));
-			}else if(FunctionCaller.isFunction(value)){
-				FunctionCaller.FunctionInfo info = FunctionCaller.analyze(value);
-				MCFPFunction function = MCFPFinder.findFunction(info, caller);
-
-				result.add(String.format("function %s", namespace.get(function.getFullName())));
-				result.add(String.format("scoreboard players operation %s var = result var", resultName));
-			}
-		}else {
-			result.add(String.format("scoreboard players operation %s var = temp%08x var", resultName, lastData));
-		}
-
+		Object lastData = popValue(stack, reserveList, namespace, holder, version);
+		putValue(result, resultName, lastData, namespace, holder, caller, version);
 
 		return result.toArray(new String[0]);
+	}
+
+	/**
+	 * 任意変数に任意値を代入するコマンドを出力します
+	 * @param result コマンド出力先
+	 * @param varname 代入先の変数名
+	 * @param value 代入する値
+	 * @param namespace ネームスペース
+	 * @param holder 変数保持者
+	 * @param caller 呼び出したクラス
+	 * @param version バージョン
+	 */
+	private static void putValue(List<String> result, String varname, Object value, Namespace namespace, INamed holder, MCFPClass caller, Version version) {
+		if(value instanceof Integer) {
+			result.add(String.format("scoreboard players set %s var %d", varname, value));
+		}else if(value instanceof FunctionCaller.FunctionInfo){
+			FunctionCaller.FunctionInfo info = (FunctionCaller.FunctionInfo) value;
+			MCFPFunction function = MCFPFinder.findFunction(info, caller);
+
+			result.addAll(FunctionCaller.prepare(info, holder, caller, namespace, version));
+			result.add(String.format("function %s", namespace.add(function)));
+			result.add(String.format("scoreboard players operation %s var = result var", varname));
+		}else if(value instanceof MacroCaller.MacroInfo){
+			MacroCaller.MacroInfo info = (MacroCaller.MacroInfo) value;
+
+			result.add(String.format("execute store result score %s var run %s", varname, info.getData()));
+		}else {
+			result.add(String.format("scoreboard players operation %s var = %s var", varname, value));
+		}
+	}
+
+	private static boolean canExecute(Object obj, Version version) {
+		return obj instanceof FunctionCaller.FunctionInfo || MacroCaller.isMacro(obj.toString(), version);
 	}
 
 	/**
@@ -362,7 +391,7 @@ public class Calculator {
 	 * @param holder
 	 * @return
 	 */
-	private static Object popValue(Stack<Object> stack, List<Integer> reserveList, Namespace namespace, INamed holder) {
+	private static Object popValue(Stack<Object> stack, List<Integer> reserveList, Namespace namespace, INamed holder, Version version) {
 		Object obj = stack.pop();
 		if(obj instanceof Integer) {
 			int value = (int) obj;
@@ -375,7 +404,9 @@ public class Calculator {
 		if(str.matches("[0-9]+")){
 			return Integer.parseInt(str);
 		}else if(FunctionCaller.isFunction(str)){
-			return FunctionCaller.analyze(str);
+			return FunctionCaller.analyze(str, version);
+		}else if(MacroCaller.isMacro(str, version)) {
+			return MacroCaller.analyze(str, version);
 		}else{
 			return convertName(str, namespace, holder);
 		}
