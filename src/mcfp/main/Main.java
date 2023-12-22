@@ -14,6 +14,8 @@ import mcfp.Version;
  */
 public class Main {
 
+	private static boolean showDetail = false;
+
 	public static void main(String[] args) {
 		if(args.length == 0) return;
 
@@ -23,8 +25,15 @@ public class Main {
 		while(index < args.length) {
 			if(args[index].startsWith("-")) {
 				String option = args[index].substring(1);
-				if(option.equals("d")) {
+				if(option.equalsIgnoreCase("d")) {
 					output = args[++index];
+				}
+				if(option.equalsIgnoreCase("s")) {
+					showDetail = true;
+				}
+				if(option.equalsIgnoreCase("version")) {
+					System.out.println("mcfpc version0.0.1");
+					return;
 				}
 			}else {
 				break;
@@ -41,7 +50,10 @@ public class Main {
 		}
 	}
 
-	public static void compile(File folder, String output) throws IOException {
+	private static void compile(File folder, String output) throws IOException {
+		if(showDetail) System.out.println("target file: " + folder.getAbsolutePath());
+		if(showDetail) System.out.println("output file: " + output);
+
 		//コンパイラを起動
 		MCFPCompiler compiler = new MCFPCompiler(Version.MC1_20_2);
 
@@ -53,20 +65,35 @@ public class Main {
 			}
 		})) {
 			compiler.addFile(file);
+			if(showDetail) System.out.println("src file: " + file);
 		}
 
 		//コンパイル開始
 		compiler.run(output, folder.getAbsolutePath());
 	}
 
-	public static List<File> getFiles(File file, FileFilter filter) {
+	private static List<File> getFiles(File file, FileFilter filter) {
 		List<File> list = new ArrayList<>();
 
 		if(file.isFile()) {
+			if(showDetail) System.out.println(file.getAbsolutePath() + "is file.");
+
 			list.add(file);
 		}else {
-			for(File sub : file.listFiles(filter)) {
-				list.addAll(getFiles(sub, filter));
+			if(showDetail) System.out.println(file.getAbsolutePath() + "is folder.");
+
+			File[] files = file.listFiles();
+
+			if(files != null) {
+				for(File sub : files) {
+					if(showDetail) System.out.println("checking subfile:" + sub);
+
+					if(filter.accept(sub)) {
+						list.addAll(getFiles(sub, filter));
+					}
+				}
+			}else {
+				if(showDetail) System.out.println("target folder is empty!");
 			}
 		}
 

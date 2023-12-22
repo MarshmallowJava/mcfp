@@ -118,11 +118,11 @@ public class MCFPCompiler {
 			MCFPFunction loadFunction = mcfpClass.getFunction("load");
 
 			if(mainFunction != null && mainFunction.getArgumentNames().length == 0) {
-				main.add(namespace.get(mainFunction.getFullName()));
+				main.add(String.format("\"%s\"", namespace.get(mainFunction.getFullName())));
 			}
 
 			if(loadFunction != null && loadFunction.getArgumentNames().length == 0) {
-				load.add(namespace.get(loadFunction.getFullName()));
+				load.add(String.format("\"%s\"", namespace.get(loadFunction.getFullName())));
 			}
 		}
 
